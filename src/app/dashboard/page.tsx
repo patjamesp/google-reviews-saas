@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+export const dynamic = "force-dynamic";import { db } from "@/lib/db";
 
 // NOTE: hardcoded to the first business for scaffold purposes.
 // Once auth is wired up, scope this to the logged-in business.
