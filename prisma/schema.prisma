@@ -1,0 +1,105 @@
+// Loopback — review-generation SaaS
+// Multi-tenant model: every table below the Business level carries a businessId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanTier {
+  TRIAL
+  STARTER
+  GROWTH
+  PRO
+}
+
+enum RequestChannel {
+  SMS
+  EMAIL
+}
+
+enum RequestStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  RESPONDED
+}
+
+enum RouteTarget {
+  GOOGLE
+  PRIVATE_FEEDBACK
+}
+
+model Business {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  googlePlaceId String?
+  planTier      PlanTier @default(TRIAL)
+  createdAt     DateTime @default(now())
+
+  users     User[]
+  contacts  Contact[]
+  requests  ReviewRequest[]
+
+  @@index([slug])
+}
+
+model User {
+  id         String   @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  email      String   @unique
+  name       String
+  role       String   @default("owner") // owner | staff
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  business    Business @relation(fields: [businessId], references: [id])
+  businessId  String
+  name        String
+  phone       String?
+  email       String?
+  source      String? // e.g. "manual", "csv-import", "pos-sync"
+  createdAt   DateTime @default(now())
+
+  requests ReviewRequest[]
+
+  @@index([businessId])
+}
+
+model ReviewRequest {
+  id          String         @id @default(cuid())
+  business    Business       @relation(fields: [businessId], references: [id])
+  businessId  String
+  contact     Contact        @relation(fields: [contactId], references: [id])
+  contactId   String
+  channel     RequestChannel
+  status      RequestStatus  @default(QUEUED)
+  sentAt      DateTime?
+  createdAt   DateTime       @default(now())
+
+  response ReviewResponse?
+
+  @@index([businessId])
+  @@index([contactId])
+}
+
+model ReviewResponse {
+  id            String        @id @default(cuid())
+  request       ReviewRequest @relation(fields: [requestId], references: [id])
+  requestId     String        @unique
+  rating        Int // 1-5
+  routedTo      RouteTarget
+  feedbackText  String?
+  respondedAt   DateTime      @default(now())
+}
